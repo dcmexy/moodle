@@ -168,8 +168,28 @@ final class events_test extends \advanced_testcase {
 
         // Checking that the event contains the expected values.
         $this->assertInstanceOf('\mod_book\event\chapter_viewed', $event);
+        $this->assertInstanceOf('\core\event\course_module_viewed', $event);
         $this->assertEquals(\context_module::instance($book->cmid), $event->get_context());
         $this->assertEquals($chapter->id, $event->objectid);
+        $this->assertEquals('book_chapters', $event->objecttable);
+        $this->assertEquals($course->id, $event->courseid);
+        $this->assertEquals(
+            new \moodle_url('/mod/book/view.php', ['id' => $book->cmid, 'chapterid' => $chapter->id]),
+            $event->get_url(),
+        );
+        $this->assertEquals(get_string('eventchapterviewed', 'mod_book'), $event->get_name());
+        $this->assertEquals(
+            "The user with id '$event->userid' viewed the chapter with id '$chapter->id' for the book with " .
+                "course module id '$book->cmid'.",
+            $event->get_description(),
+        );
+        $this->assertEquals($book, $event->get_record_snapshot('book', $book->id));
+        $this->assertEquals($chapter, $event->get_record_snapshot('book_chapters', $chapter->id));
+        $this->assertEquals(
+            ['db' => 'book_chapters', 'restore' => 'book_chapter'],
+            chapter_viewed::get_objectid_mapping(),
+        );
+        $this->assertEquals('\mod_book\event\chapter_viewed', $event->eventname);
     }
 
 }

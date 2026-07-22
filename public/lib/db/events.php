@@ -74,6 +74,10 @@ $observers = [
         'eventname'   => '\core\event\course_module_completion_updated',
         'callback'    => 'core_competency\api::observe_course_module_completion_updated',
     ],
+    [
+        'eventname'   => '\core\event\course_module_viewed',
+        'callback'    => '\core\event\observer::observe_course_module_viewed',
+    ],
 ];
 
 // List of all events triggered by Moodle can be found using Events list report.
