@@ -98,6 +98,7 @@ final class externallib_test extends externallib_advanced_testcase {
 
         $event = array_shift($events);
         $this->assertInstanceOf('\mod_book\event\chapter_viewed', $event);
+        $this->assertInstanceOf('\core\event\course_module_viewed', $event);
         $this->assertEquals($chapter->id, $event->objectid);
 
         $result = mod_book_external::view_book($book->id, $chapter->id);
@@ -106,6 +107,10 @@ final class externallib_test extends externallib_advanced_testcase {
         $events = $sink->get_events();
         // We expect a total of 3 events.
         $this->assertCount(3, $events);
+        $event = end($events);
+        $this->assertInstanceOf('\mod_book\event\chapter_viewed', $event);
+        $this->assertInstanceOf('\core\event\course_module_viewed', $event);
+        $this->assertEquals($chapter->id, $event->objectid);
 
         // Try to view a hidden chapter.
         try {
