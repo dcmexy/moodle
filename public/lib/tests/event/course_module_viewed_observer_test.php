@@ -89,6 +89,63 @@ final class course_module_viewed_observer_test extends advanced_testcase {
     }
 
     /**
+     * Test the production observer is registered for course module views.
+     */
+    public function test_observer_is_registered(): void {
+        $this->resetAfterTest();
+
+        manager::phpunit_reset();
+        $observers = manager::get_all_observers();
+
+        $this->assertArrayHasKey('\core\event\course_module_viewed', $observers);
+        $callbacks = array_map(
+            static fn(\stdClass $observer): mixed => $observer->callable,
+            $observers['\core\event\course_module_viewed'],
+        );
+        $this->assertContains('\core\event\observer::observe_course_module_viewed', $callbacks);
+    }
+
+    /**
+     * Test that guest course module views do not update access.
+     */
+    public function test_observer_ignores_guest_user(): void {
+        global $DB, $USER;
+
+        $this->resetAfterTest(true);
+
+        [$course, $page, $cm] = $this->create_course_with_page();
+        $this->setGuestUser();
+
+        $event = $this->create_wrapper_view_event($course->id, $cm->id, $page->id, $USER->id);
+        testable_observer::observe_course_module_viewed($event);
+
+        $this->assertFalse($DB->record_exists('user_lastaccess', [
+            'userid' => $USER->id,
+            'courseid' => $course->id,
+        ]));
+    }
+
+    /**
+     * Test that unauthenticated course module views do not update access.
+     */
+    public function test_observer_ignores_unauthenticated_user(): void {
+        global $DB, $USER;
+
+        $this->resetAfterTest(true);
+
+        [$course, $page, $cm] = $this->create_course_with_page();
+        $this->setUser();
+
+        $event = $this->create_wrapper_view_event($course->id, $cm->id, $page->id, $USER->id);
+        testable_observer::observe_course_module_viewed($event);
+
+        $this->assertFalse($DB->record_exists('user_lastaccess', [
+            'userid' => $USER->id,
+            'courseid' => $course->id,
+        ]));
+    }
+
+    /**
      * Test that access is created when update logic processes a module view event for the acting user.
      */
     public function test_observer_creates_access(): void {
@@ -274,6 +331,9 @@ final class course_module_viewed_observer_test extends advanced_testcase {
 
         $this->assertTrue($DB->record_exists('user_lastaccess', ['userid' => $user->id, 'courseid' => $course->id]));
         $this->assertSame(2, testable_observer::$invocations);
+        $this->assertCount(2, testable_observer::$timeaccesses);
+        $this->assertGreaterThan(0, testable_observer::$timeaccesses[0]);
+        $this->assertSame(testable_observer::$timeaccesses[0], testable_observer::$timeaccesses[1]);
     }
 
     /**

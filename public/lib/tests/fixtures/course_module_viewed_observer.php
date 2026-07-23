@@ -32,19 +32,31 @@ use core\event\observer;
 /**
  * Test observer which simulates a webservice request.
  */
+
+/**
+ * Test observer which simulates a webservice request.
+ */
 class testable_observer extends observer {
     /** @var int Number of observer invocations. */
     public static int $invocations = 0;
 
+    /** @var int[] Access times recorded after each invocation. */
+    public static array $timeaccesses = [];
+
+    /** @var bool[] Courses prepared for access-update assertions. */
+    private static array $preparedcourses = [];
+
     /**
-     * Reset the invocation count.
+     * Reset the observer state.
      */
     public static function reset(): void {
         self::$invocations = 0;
+        self::$timeaccesses = [];
+        self::$preparedcourses = [];
     }
 
     /**
-     * Remove non-WS require_login access before invoking the production callback.
+     * Remove non-WS require_login access once before invoking the production callback.
      *
      * @param course_module_viewed $event The module view event.
      */
@@ -52,9 +64,18 @@ class testable_observer extends observer {
         global $DB, $USER;
 
         self::$invocations++;
-        $DB->delete_records('user_lastaccess', ['userid' => $USER->id, 'courseid' => $event->courseid]);
-        unset($USER->currentcourseaccess[$event->courseid]);
+        $key = $USER->id . ':' . $event->courseid;
+        if (empty(self::$preparedcourses[$key])) {
+            $DB->delete_records('user_lastaccess', ['userid' => $USER->id, 'courseid' => $event->courseid]);
+            unset($USER->currentcourseaccess[$event->courseid]);
+            self::$preparedcourses[$key] = true;
+        }
+
         parent::observe_course_module_viewed($event);
+        self::$timeaccesses[] = (int) $DB->get_field('user_lastaccess', 'timeaccess', [
+            'userid' => $USER->id,
+            'courseid' => $event->courseid,
+        ]);
     }
 
     /**
