@@ -173,6 +173,10 @@ final class events_test extends \advanced_testcase {
         $this->assertEquals($chapter->id, $event->objectid);
         $this->assertEquals('book_chapters', $event->objecttable);
         $this->assertEquals($course->id, $event->courseid);
+        $this->assertSame('r', $event->crud);
+        $this->assertSame(\core\event\base::LEVEL_PARTICIPATING, $event->edulevel);
+        $this->assertSame('viewed', $event->action);
+        $this->assertSame('chapter', $event->target);
         $this->assertEquals(
             new \moodle_url('/mod/book/view.php', ['id' => $book->cmid, 'chapterid' => $chapter->id]),
             $event->get_url(),
