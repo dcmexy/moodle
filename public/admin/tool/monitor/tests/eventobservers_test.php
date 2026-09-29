@@ -30,6 +30,7 @@ require_once($CFG->dirroot . '/blog/lib.php');
  * @copyright  2014 onwards Ankit Agarwal <ankit.agrr@gmail.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(eventobservers::class)]
 final class eventobservers_test extends \advanced_testcase {
     /**
      * Set up method.
@@ -211,6 +212,45 @@ final class eventobservers_test extends \advanced_testcase {
         $this->assertEquals($event->get_url()->out(), $monitorevent->link);
         $this->assertEquals($event->courseid, $monitorevent->courseid);
         $this->assertEquals($event->timecreated, $monitorevent->timecreated);
+    }
+
+    /**
+     * Test a monitor subscription to the concrete Book chapter event continues to match.
+     */
+    public function test_book_chapter_viewed_subscription(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+
+        $user = $this->getDataGenerator()->create_user();
+        $course = $this->getDataGenerator()->create_course();
+        $book = $this->getDataGenerator()->create_module('book', ['course' => $course->id]);
+        $bookgenerator = $this->getDataGenerator()->get_plugin_generator('mod_book');
+        $chapter = $bookgenerator->create_chapter(['bookid' => $book->id]);
+        $monitorgenerator = $this->getDataGenerator()->get_plugin_generator('tool_monitor');
+
+        $rule = $monitorgenerator->create_rule((object) [
+            'courseid' => $course->id,
+            'plugin' => 'mod_book',
+            'eventname' => '\\mod_book\\event\\chapter_viewed',
+        ]);
+        $monitorgenerator->create_subscription((object) [
+            'courseid' => $course->id,
+            'ruleid' => $rule->id,
+            'userid' => $user->id,
+        ]);
+
+        $event = \mod_book\event\chapter_viewed::create_from_chapter(
+            $book,
+            \context_module::instance($book->cmid),
+            $chapter,
+        );
+        $event->trigger();
+
+        $monitorevent = $DB->get_record('tool_monitor_events', []);
+        $this->assertNotFalse($monitorevent);
+        $this->assertEquals($event->eventname, $monitorevent->eventname);
+        $this->assertEquals($event->get_url()->out(), $monitorevent->link);
     }
 
     /**

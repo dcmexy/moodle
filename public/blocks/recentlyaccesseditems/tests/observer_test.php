@@ -29,6 +29,7 @@ require_once($CFG->dirroot . '/mod/assign/tests/generator.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @since      Moodle 3.6
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(observer::class)]
 final class observer_test extends \advanced_testcase {
     use \mod_assign_test_generator;
 
@@ -134,6 +135,31 @@ final class observer_test extends \advanced_testcase {
         $this->assertCount(1, $records);
         $this->assertEquals($event2->timecreated, array_shift($records)->timeaccess);
 
+    }
+
+    /**
+     * Test a direct Book chapter view is recorded for the Book course module.
+     */
+    public function test_book_chapter_view_recorded(): void {
+        global $DB;
+
+        $book = $this->getDataGenerator()->create_module('book', ['course' => $this->course->id]);
+        $bookgenerator = $this->getDataGenerator()->get_plugin_generator('mod_book');
+        $chapter = $bookgenerator->create_chapter(['bookid' => $book->id]);
+        $context = \context_module::instance($book->cmid);
+
+        $this->setUser($this->student);
+        $event = \mod_book\event\chapter_viewed::create_from_chapter($book, $context, $chapter);
+        $event->trigger();
+
+        $record = $DB->get_record($this->table, [
+            'userid' => $this->student->id,
+            'courseid' => $this->course->id,
+            'cmid' => $book->cmid,
+        ]);
+
+        $this->assertNotFalse($record);
+        $this->assertEquals($event->timecreated, $record->timeaccess);
     }
 
     /**
