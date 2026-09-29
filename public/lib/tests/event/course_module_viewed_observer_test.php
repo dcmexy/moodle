@@ -16,14 +16,14 @@
 
 namespace core\event;
 
+defined('MOODLE_INTERNAL') || die();
+
 global $CFG;
 
 use advanced_testcase;
 use context_course;
 use context_module;
 use core_tests\event\testable_observer;
-
-defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot . '/course/externallib.php');
 require_once($CFG->dirroot . '/mod/page/classes/external.php');

@@ -23,6 +23,8 @@ namespace core;
  * @category  test
  * @copyright 2012 The Open University
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers ::user_course_accesstime_log
+ * @covers ::user_accesstime_log
  */
 final class datalib_test extends \advanced_testcase {
     protected function normalise_sql($sort) {
