@@ -1627,6 +1627,50 @@ function user_accesstime_log($courseid=0) {
         return;
     }
 
+    user_course_accesstime_log($courseid);
+}
+
+/**
+ * Store user course last access time without updating site lastaccess or IP address.
+ *
+ * @package core
+ * @category log
+ * @global stdClass $USER
+ * @global moodle_database $DB
+ * @uses LASTACCESS_UPDATE_SECS
+ * @uses SITEID
+ * @param int $courseid empty courseid means site
+ * @return void
+ */
+function user_course_accesstime_log($courseid=0) {
+    global $USER, $DB;
+
+    if (!isloggedin() or \core\session\manager::is_loggedinas()) {
+        // no access tracking
+        return;
+    }
+
+    if (isguestuser()) {
+        // Do not update guest access times for performance.
+        return;
+    }
+
+    if (defined('USER_KEY_LOGIN') && USER_KEY_LOGIN === true) {
+        // Do not update user login time when using user key login.
+        return;
+    }
+
+    if (empty($courseid)) {
+        $courseid = SITEID;
+    }
+
+    if ($courseid == SITEID) {
+    ///  no user_lastaccess for frontpage
+        return;
+    }
+
+    $timenow = time();
+
 /// Store course lastaccess times for the current user
     if (empty($USER->currentcourseaccess[$courseid]) or ($timenow - $USER->currentcourseaccess[$courseid] > LASTACCESS_UPDATE_SECS)) {
 

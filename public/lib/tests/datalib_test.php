@@ -1102,4 +1102,77 @@ final class datalib_test extends \advanced_testcase {
         $actual = get_safe_orderby_multiple($orderbymap, $orderbykeys, $directions);
         $this->assertEquals($expected, $actual);
     }
+
+    /**
+     * Test that course-only access updates do not modify the user's site access or last IP.
+     */
+    public function test_user_course_accesstime_log_updates_course_without_touching_lastip(): void {
+        global $DB, $USER;
+
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course();
+        $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
+
+        $oldlastaccess = time() - LASTACCESS_UPDATE_SECS - 10;
+        $oldlastip = '10.0.0.1';
+
+        $DB->update_record('user', (object) [
+            'id' => $user->id,
+            'lastaccess' => $oldlastaccess,
+            'lastip' => $oldlastip,
+        ]);
+
+        $USER->lastaccess = $oldlastaccess;
+        $USER->lastip = $oldlastip;
+        $USER->currentcourseaccess = [];
+
+        user_course_accesstime_log($course->id);
+
+        $updateduser = $DB->get_record('user', ['id' => $user->id], 'id, lastaccess, lastip', MUST_EXIST);
+        $timeaccess = $DB->get_field('user_lastaccess', 'timeaccess', ['userid' => $user->id, 'courseid' => $course->id]);
+
+        $this->assertSame($oldlastaccess, (int) $updateduser->lastaccess);
+        $this->assertSame($oldlastip, $updateduser->lastip);
+        $this->assertIsNumeric($timeaccess);
+        $this->assertGreaterThan(0, $timeaccess);
+    }
+
+    /**
+     * Test that the full access logger still updates both course access and last IP.
+     */
+    public function test_user_accesstime_log_updates_course_and_lastip(): void {
+        global $DB, $USER;
+
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course();
+        $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
+
+        $oldlastaccess = time() - LASTACCESS_UPDATE_SECS - 10;
+        $oldlastip = '10.0.0.1';
+        $currentip = getremoteaddr();
+
+        $DB->update_record('user', (object) [
+            'id' => $user->id,
+            'lastaccess' => $oldlastaccess,
+            'lastip' => $oldlastip,
+        ]);
+
+        $USER->lastaccess = $oldlastaccess;
+        $USER->lastip = $oldlastip;
+        $USER->currentcourseaccess = [];
+
+        user_accesstime_log($course->id);
+
+        $updateduser = $DB->get_record('user', ['id' => $user->id], 'id, lastaccess, lastip', MUST_EXIST);
+        $timeaccess = $DB->get_field('user_lastaccess', 'timeaccess', ['userid' => $user->id, 'courseid' => $course->id]);
+
+        $this->assertGreaterThan($oldlastaccess, (int) $updateduser->lastaccess);
+        $this->assertSame($currentip, $updateduser->lastip);
+        $this->assertIsNumeric($timeaccess);
+        $this->assertGreaterThan(0, $timeaccess);
+    }
 }
