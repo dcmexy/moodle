@@ -1635,18 +1635,16 @@ function user_accesstime_log($courseid=0) {
  *
  * @package core
  * @category log
- * @global stdClass $USER
- * @global moodle_database $DB
  * @uses LASTACCESS_UPDATE_SECS
  * @uses SITEID
  * @param int $courseid empty courseid means site
  * @return void
  */
-function user_course_accesstime_log($courseid=0) {
+function user_course_accesstime_log($courseid = 0) {
     global $USER, $DB;
 
-    if (!isloggedin() or \core\session\manager::is_loggedinas()) {
-        // no access tracking
+    if (!isloggedin() || \core\session\manager::is_loggedinas()) {
+        // No access tracking.
         return;
     }
 
@@ -1665,19 +1663,21 @@ function user_course_accesstime_log($courseid=0) {
     }
 
     if ($courseid == SITEID) {
-    ///  no user_lastaccess for frontpage
+        // No user_lastaccess for frontpage.
         return;
     }
 
     $timenow = time();
 
-/// Store course lastaccess times for the current user
-    if (empty($USER->currentcourseaccess[$courseid]) or ($timenow - $USER->currentcourseaccess[$courseid] > LASTACCESS_UPDATE_SECS)) {
-
+    // Store course lastaccess times for the current user.
+    if (
+        empty($USER->currentcourseaccess[$courseid]) ||
+        ($timenow - $USER->currentcourseaccess[$courseid] > LASTACCESS_UPDATE_SECS)
+    ) {
         $lastaccess = $DB->get_field('user_lastaccess', 'timeaccess', array('userid'=>$USER->id, 'courseid'=>$courseid));
 
         if ($lastaccess === false) {
-            // Update course lastaccess for next checks
+            // Update course lastaccess for next checks.
             $USER->currentcourseaccess[$courseid] = $timenow;
 
             $last = new stdClass();
@@ -1698,11 +1698,8 @@ function user_course_accesstime_log($courseid=0) {
                 // We can just continue without having to do anything.
             }
 
-        } else if ($timenow - $lastaccess <  LASTACCESS_UPDATE_SECS) {
-            // no need to update now, it was updated recently in concurrent login ;-)
-
-        } else {
-            // Update course lastaccess for next checks
+        } else if ($timenow - $lastaccess >= LASTACCESS_UPDATE_SECS) {
+            // Update course lastaccess for next checks.
             $USER->currentcourseaccess[$courseid] = $timenow;
 
             $DB->set_field('user_lastaccess', 'timeaccess', $timenow, array('userid'=>$USER->id, 'courseid'=>$courseid));
